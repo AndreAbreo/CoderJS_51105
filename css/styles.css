@@ -1,0 +1,22 @@
+h1{
+    margin: 2rem;
+    font-size: 5rem;
+    color: aquamarine;
+    text-align: center;
+    text-shadow: 2px 2px black;
+}
+
+h2{
+    text-align: center;
+
+}
+
+h3{
+    text-align: center;
+    color: aquamarine;
+    text-shadow: 2px 2px black;
+}
+
+body{
+    background-color: slategray;
+}
