@@ -1,5 +1,6 @@
 const btnSwal = document.getElementById('botonSwal');
 
+// Registrar un nuevo cliente
 let clientes = [];
 
 if (localStorage.getItem('clientes')) {
@@ -22,12 +23,12 @@ document.querySelector('#formulario').addEventListener('submit', function (e) {
   });
 
   if (usuarioRegistrado) {
-      Swal.fire({
+    Swal.fire({
       title: 'Este usuario ya está registrado',
       icon: 'error',
       confirmButtonText: 'Aceptar'
     })
-    
+
     document.querySelector('#formulario').reset();
 
     return;
@@ -57,6 +58,7 @@ document.querySelector('#formulario').addEventListener('submit', function (e) {
   document.querySelector('#formulario').reset();
 });
 
+// Simular un nuevo prestamo
 let prestamos = [];
 
 if (localStorage.getItem('prestamos') !== null) {
@@ -81,7 +83,7 @@ if (simularBtn) {
     let outputTotal = document.querySelector("#total");
 
     if (!montoInput.value || !cuotasInput.value || !cedulaInput.value) {
-        Swal.fire({
+      Swal.fire({
         title: 'Por favor, complete los campos de MONTO, CUOTAS y CÉDULA',
         icon: 'warning',
         confirmButtonText: 'Aceptar'
@@ -152,6 +154,7 @@ if (confirmarBtn) {
   });
 }
 
+// Buscar clientes y/o prestamos
 function buscarCliente(cedula) {
   return clientes.find((cliente) => cliente.cedula === cedula);
 }
@@ -172,7 +175,7 @@ buscarBtn.addEventListener("click", function () {
   let cliente = buscarCliente(cedula);
 
   if (cliente) {
-    resultadoDiv.innerHTML = `Cliente encontrado: <br>Nombre: ${cliente.nombre} ${cliente.apellido} (${cliente.categoria})`;
+    resultadoDiv.innerHTML = `Cliente encontrado: <br>Nombre: ${cliente.nombre} ${cliente.apellido} Cédula ${cliente.cedula} (${cliente.categoria})`;
   }
 
   let prestamos = buscarPrestamos(cedula);
@@ -186,22 +189,165 @@ buscarBtn.addEventListener("click", function () {
   } else {
     resultadoDiv.innerHTML += `<br>No se encontraron préstamos para esta cédula.`;
   }
-  let offcanvas = document.getElementById("offcanvasDarkNavbar");
-  let offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvas);
-  offcanvasInstance.hide();
+
+
+
   cedulaInput.value = "";
 
 });
 
+// Acumulador de prestamos
 function actualizarTotal() {
   let total = prestamos.reduce((acumulador, prestamo) => acumulador + Number(prestamo.monto), 0);
   document.getElementById("total1").innerHTML = `$${total}`;
 }
 
+// login de cliente
+const loginBtn = document.getElementById("login-btn");
+loginBtn.addEventListener("click", function () {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+
+  if (username.trim() === "" || password.trim() === "") {
+    Swal.fire({
+      title: 'Por favor, ingresa tu Cédula y Contraseña',
+      icon: 'warning',
+      confirmButtonText: 'Aceptar'
+    })
+    return;
+  }
+
+  let cliente = null;
+  for (let i = 0; i < clientes.length; i++) {
+    if (clientes[i].cedula === username) {
+      cliente = clientes[i];
+      break;
+    }
+  }
+
+  if (cliente === null) {
+    Swal.fire({
+      title: 'Usuario no autorizado',
+      icon: 'error',
+      confirmButtonText: 'Aceptar'
+    })
+    return;
+  }
+
+  if (cliente.pass !== password) {
+    Swal.fire({
+      title: 'Contraseña incorrecta',
+      icon: 'error',
+      confirmButtonText: 'Aceptar'
+    })
+    return;
+  }
+
+  // Redirigimos a la página "info.html"
+  window.location.href = "info.html";
+});
+
+
+// Uso de API
+const formulario = document.querySelector("#form-search");
+const selectCripto = document.querySelector("#criptomonedas");
+const formularioContenedor = document.querySelector(".form-side");
+const contenedorRespuesta = document.querySelector(".container-answer");
+
+const objBusqueda = {
+  moneda: 'USD',
+  criptomoneda: ''
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  consultarCriptos();
+
+  formulario.addEventListener('submit', enviarFormulario);
+  selectCripto.addEventListener('change', obtenerValor);
+})
+
+async function enviarFormulario(e) {
+  e.preventDefault();
+  const { moneda, criptomoneda } = objBusqueda;
+  if (criptomoneda === '') {
+    mostrarError('Seleccione una criptomoneda...');
+    return;
+  }
+  try {
+    const resultado = await consultarAPI(moneda, criptomoneda);
+    mostrarCotizacion(resultado.DISPLAY[criptomoneda][moneda]);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+async function consultarAPI(moneda, criptomoneda) {
+  const url = `https://min-api.cryptocompare.com/data/pricemultifull?fsyms=${criptomoneda}&tsyms=${moneda}`;
+  const respuesta = await fetch(url);
+  if (!respuesta.ok) {
+    throw new Error('No se pudo obtener la cotización.');
+  }
+  const resultadoJson = await respuesta.json();
+  return resultadoJson;
+}
+
+function mostrarCotizacion(data) {
+  limpiarHTML();
+  const { PRICE, HIGHDAY, LOWDAY, CHANGEPCT24HOUR, LASTUPDATE } = data;
+  const respuesta = document.createElement('div');
+  respuesta.classList.add('display-info');
+  respuesta.innerHTML = `
+    <p class="main-price">Precio: <span>${PRICE}</span></p>
+    <p>Precio más alto del día:: <span>${HIGHDAY}</span></p>
+    <p>Precio más bajo del día: <span>${LOWDAY}</span></p>
+    <p>Variación últimas 24 horas: <span>${CHANGEPCT24HOUR}%</span></p>
+    <p>Última Actualización: <span>${LASTUPDATE}</span></p>
+  `;
+  contenedorRespuesta.appendChild(respuesta);
+}
+
+function mostrarError(mensaje) {
+  const error = document.createElement('p');
+  error.classList.add("error");
+  error.textContent = mensaje;
+  formularioContenedor.appendChild(error);
+  setTimeout(() => error.remove(), 3000);
+}
+
+function obtenerValor(e) {
+  objBusqueda[e.target.name] = e.target.value;
+}
+
+async function consultarCriptos() {
+  const url = 'https://min-api.cryptocompare.com/data/top/mktcapfull?limit=10&tsym=USD';
+  try {
+    const respuesta = await fetch(url);
+    if (!respuesta.ok) {
+      throw new Error('No se pudo obtener la lista de criptomonedas.');
+    }
+    const respuestaJson = await respuesta.json();
+    selectCriptos(respuestaJson.Data);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+function selectCriptos(criptos) {
+  criptos.forEach(cripto => {
+    const { FullName, Name } = cripto.CoinInfo;
+    const opcion = document.createElement("option");
+    opcion.value = Name;
+    opcion.textContent = FullName;
+    selectCripto.appendChild(opcion);
+  });
+}
+
+function limpiarHTML() {
+  contenedorRespuesta.innerHTML = '';
+}
 
 // Actualizar total al cargar la página
 actualizarTotal();
 
-
-
-// Simulador creado por André Abreo //
+// PROGRAMA DE SIMULACIÓN REALIZADO POR ANDRÉ ABREO
